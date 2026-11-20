@@ -110,27 +110,25 @@
 
       /* ── Main layout ── */
       .main-layout {
-        display: grid;
-        grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
+        display: block;
         gap: 1.5rem;
         width: min(96%, 1440px);
         align-items: flex-start;
       }
 
       .form-card {
-        grid-column: 1;
-        grid-row: 1;
+        width: min(65%, 900px);
       }
 
       .sprite-preview-card {
-        grid-column: 2;
-        grid-row: 1;
-        position: sticky;
+        position: fixed;
         top: 1rem;
-        max-width: 100%;
+        right: clamp(1rem, 3vw, 3rem);
+        width: min(28vw, 360px);
+        max-width: none;
         max-height: calc(100vh - 2rem);
         overflow: auto;
-        z-index: 1;
+        z-index: 2;
       }
 
       /* ── Form card ── */
@@ -395,6 +393,7 @@
         .form-card {
           width: 100%;
           max-width: 860px;
+          margin-inline: auto;
         }
 
         .sprite-preview-card {
