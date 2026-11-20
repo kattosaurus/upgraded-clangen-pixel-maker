@@ -1,15 +1,12 @@
 /**
- * Falling pixel-art leaves.
+ * Falling pixel-art leaves (decorative background layer).
  *
  * - Leaves spawn just above the top of the viewport and drift down with a gentle sway.
- * - When a leaf reaches the top edge of a "collidable" element (see CONFIG.collidables)
- *   it lands, stays attached to that element (so it scrolls with it), and after
- *   5 seconds it fades out and is removed.
- * - Leaves that miss every element simply fall out of the screen: the background
- *   is not a surface.
- * - Everything is drawn on one fixed canvas with image smoothing disabled, an
- *   integer pixel scale and positions snapped to whole device pixels, so the
- *   pixel art never gets blurred.
+ * - They are drawn on a fixed canvas placed right after the .bg-sky element, so they
+ *   sit above the night sky but behind all of the page UI (cards, text, buttons).
+ * - No collision: leaves fall straight through and are removed once they leave the screen.
+ * - Image smoothing is off, the pixel scale is a whole number and positions snap to
+ *   whole device pixels, so the pixel art never gets blurred.
  */
 
 import leaf1 from "./particles/leaf1.png";
@@ -22,33 +19,23 @@ const SPRITE_URLS: string[] = [leaf1, leaf2, leaf3, leaf4, leaf5];
 
 const CONFIG = {
   /** CSS pixels used for each pixel of the texture (4 = every texture pixel is 4x4 px). */
-  pixelScale: 6,
+  pixelScale: 8,
   /** Max leaves alive at once. */
-  maxLeaves: 150,
+  maxLeaves: 360,
   /** Random delay between spawns, in ms [min, max]. */
-  spawnIntervalMs: [500, 600] as [number, number],
+  spawnIntervalMs: [250, 600] as [number, number],
   /** Fall speed in CSS px / second [min, max]. */
   fallSpeed: [35, 65] as [number, number],
   /** Constant sideways wind in px / second [min, max]. */
-  drift: [-8, 14] as [number, number],
+  drift: [-25, 25] as [number, number],
   /** Sway strength (horizontal velocity amplitude, px / second) [min, max]. */
-  swayAmp: [10, 30] as [number, number],
+  swayAmp: [40, 60] as [number, number],
   /** Sway speed in radians / second [min, max]. */
   swayFreq: [1.2, 2.4] as [number, number],
   /** Max tilt while falling, in degrees. */
-  maxTiltDeg: 35,
+  maxTiltDeg: 90,
   /** Rotation snaps to this step (keeps the pixel-art look). 0 = continuous. */
   rotationStepDeg: 15,
-  /** Elements the leaves can land on (their top edge). */
-  collidables: ".glass-card, .page-wrapper > h1",
-  /** How far a landed leaf sinks into the surface, in CSS px. */
-  sinkPx: 2,
-  /** Time a landed leaf stays fully visible before fading, in ms. */
-  fadeDelayMs: 5000,
-  /** Fade-out duration, in ms. */
-  fadeDurationMs: 1200,
-  /** z-index of the canvas (above the cards, below the "return to preview" bar). */
-  zIndex: 4,
 };
 
 const DEG = Math.PI / 180;
@@ -64,18 +51,7 @@ interface Leaf {
   swayFreq: number;
   swayPhase: number;
   angle: number;
-  restAngle: number;
   tilt: number;
-  state: "falling" | "landed";
-  host: Element | null;
-  offX: number; // x offset from the host's left edge
-  landedAt: number;
-  alpha: number;
-}
-
-interface Surface {
-  el: Element;
-  rect: DOMRect;
 }
 
 function rand(min: number, max: number): number {
@@ -107,10 +83,18 @@ async function init(): Promise<void> {
     width: "100vw",
     height: "100vh",
     pointerEvents: "none",
-    zIndex: String(CONFIG.zIndex),
+    // Same layer as .bg-sky (z-index: -1). Because the canvas comes right after it in
+    // the DOM, it is painted on top of the sky but still behind all of the page UI.
+    zIndex: "-1",
     imageRendering: "pixelated",
   });
-  document.body.appendChild(canvas);
+
+  const sky = document.querySelector(".bg-sky");
+  if (sky) {
+    sky.insertAdjacentElement("afterend", canvas);
+  } else {
+    document.body.prepend(canvas);
+  }
 
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
@@ -150,106 +134,28 @@ async function init(): Promise<void> {
       swayFreq: rand(...CONFIG.swayFreq),
       swayPhase: rand(0, Math.PI * 2),
       angle: 0,
-      restAngle: rand(-25, 25) * DEG,
       tilt: rand(0.6, 1) * CONFIG.maxTiltDeg * DEG,
-      state: "falling",
-      host: null,
-      offX: 0,
-      landedAt: 0,
-      alpha: 1,
     };
   }
 
-  function getSurfaces(): Surface[] {
-    const out: Surface[] = [];
-    document.querySelectorAll(CONFIG.collidables).forEach((el) => {
-      const rect = el.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) out.push({ el, rect });
-    });
-    return out;
-  }
-
-  /** Returns false when the leaf should be removed. */
-  function step(
-    leaf: Leaf,
-    dt: number,
-    now: number,
-    surfaces: Surface[],
-  ): boolean {
+  /** Returns false when the leaf has left the screen and should be removed. */
+  function step(leaf: Leaf, dt: number): boolean {
     const { w, h } = sizeOf(leaf);
 
-    if (leaf.state === "falling") {
-      const prevBottom = leaf.y + h / 2;
+    leaf.t += dt;
+    const phase = leaf.t * leaf.swayFreq + leaf.swayPhase;
+    leaf.x += (leaf.drift + Math.cos(phase) * leaf.swayAmp) * dt;
+    leaf.y += leaf.fallSpeed * (1 + 0.2 * Math.sin(phase * 0.6)) * dt;
+    leaf.angle = Math.cos(phase) * leaf.tilt;
 
-      leaf.t += dt;
-      const phase = leaf.t * leaf.swayFreq + leaf.swayPhase;
-      leaf.x += (leaf.drift + Math.cos(phase) * leaf.swayAmp) * dt;
-      leaf.y += leaf.fallSpeed * (1 + 0.2 * Math.sin(phase * 0.6)) * dt;
-      leaf.angle = Math.cos(phase) * leaf.tilt;
-
-      const bottom = leaf.y + h / 2;
-
-      // Find the highest surface whose top edge we just crossed.
-      let hit: Surface | null = null;
-      for (const s of surfaces) {
-        const r = s.rect;
-        if (leaf.x < r.left || leaf.x > r.right) continue;
-        if (prevBottom <= r.top + 4 && bottom >= r.top) {
-          if (!hit || r.top < hit.rect.top) hit = s;
-        }
-      }
-
-      if (hit) {
-        leaf.state = "landed";
-        leaf.host = hit.el;
-        leaf.offX = leaf.x - hit.rect.left;
-        leaf.y = hit.rect.top - h / 2 + CONFIG.sinkPx;
-        leaf.landedAt = now;
-        leaf.alpha = 1;
-        return true;
-      }
-
-      // Fell past the bottom or far off the sides: the background isn't a surface.
-      if (leaf.y - h / 2 > window.innerHeight) return false;
-      if (leaf.x < -w * 2 || leaf.x > window.innerWidth + w * 2) return false;
-      return true;
-    }
-
-    // ── landed ──
-    const host = leaf.host;
-    const rect = host ? host.getBoundingClientRect() : null;
-
-    if (
-      !host ||
-      !host.isConnected ||
-      !rect ||
-      rect.width === 0 ||
-      leaf.offX < 0 ||
-      leaf.offX > rect.width
-    ) {
-      // Surface disappeared or moved out from under the leaf: let it fall again.
-      leaf.state = "falling";
-      leaf.host = null;
-      leaf.alpha = 1;
-      return true;
-    }
-
-    leaf.x = rect.left + leaf.offX;
-    leaf.y = rect.top - h / 2 + CONFIG.sinkPx;
-    leaf.angle += (leaf.restAngle - leaf.angle) * Math.min(1, dt * 6);
-
-    const age = now - leaf.landedAt;
-    if (age > CONFIG.fadeDelayMs) {
-      leaf.alpha = 1 - (age - CONFIG.fadeDelayMs) / CONFIG.fadeDurationMs;
-      if (leaf.alpha <= 0) return false;
-    }
+    if (leaf.y - h / 2 > window.innerHeight) return false;
+    if (leaf.x < -w * 2 || leaf.x > window.innerWidth + w * 2) return false;
     return true;
   }
 
   function draw(): void {
     const c = ctx as CanvasRenderingContext2D;
     c.setTransform(1, 0, 0, 1, 0, 0);
-    c.globalAlpha = 1;
     c.clearRect(0, 0, canvas.width, canvas.height);
     c.imageSmoothingEnabled = false;
 
@@ -272,12 +178,10 @@ async function init(): Promise<void> {
         Math.round(leaf.y * dpr),
       );
       if (a !== 0) c.rotate(a);
-      c.globalAlpha = Math.max(0, Math.min(1, leaf.alpha));
       c.drawImage(leaf.img, Math.round(-dw / 2), Math.round(-dh / 2), dw, dh);
     }
 
     c.setTransform(1, 0, 0, 1, 0, 0);
-    c.globalAlpha = 1;
   }
 
   let last = performance.now();
@@ -293,9 +197,8 @@ async function init(): Promise<void> {
       spawnIn = rand(...CONFIG.spawnIntervalMs);
     }
 
-    const surfaces = getSurfaces();
     for (let i = leaves.length - 1; i >= 0; i--) {
-      if (!step(leaves[i], dt, now, surfaces)) leaves.splice(i, 1);
+      if (!step(leaves[i], dt)) leaves.splice(i, 1);
     }
 
     draw();
