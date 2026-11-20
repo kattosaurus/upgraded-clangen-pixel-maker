@@ -1,5 +1,6 @@
 import "./main.css";
 import "./common.css";
+import "./leaves";
 import drawCat from "./library/drawCat";
 import loadingImg from "./assets/loading.png";
 import errorImg from "./assets/error_placeholder.png";
