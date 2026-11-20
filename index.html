@@ -110,13 +110,27 @@
 
       /* ── Main layout ── */
       .main-layout {
-        display: flex;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
         gap: 1.5rem;
-        width: 90%;
-        max-width: 1200px;
+        width: min(96%, 1440px);
         align-items: flex-start;
-        flex-wrap: wrap;
-        justify-content: center;
+      }
+
+      .form-card {
+        grid-column: 1;
+        grid-row: 1;
+      }
+
+      .sprite-preview-card {
+        grid-column: 2;
+        grid-row: 1;
+        position: sticky;
+        top: 1rem;
+        max-width: 100%;
+        max-height: calc(100vh - 2rem);
+        overflow: auto;
+        z-index: 1;
       }
 
       /* ── Form card ── */
@@ -351,6 +365,8 @@
 
       footer p + p { margin-top: 4px; }
 
+      .return-preview { display: none; }
+
       /* ── Scrollbar ── */
       ::-webkit-scrollbar { width: 6px; }
       ::-webkit-scrollbar-track { background: transparent; }
@@ -367,6 +383,61 @@
       }
 
       /* ── Responsive ── */
+      @media (max-width: 900px) {
+        .main-layout {
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          width: 95%;
+        }
+
+        .sprite-preview-card,
+        .form-card {
+          width: 100%;
+          max-width: 860px;
+        }
+
+        .sprite-preview-card {
+          position: static;
+          max-height: none;
+          overflow: visible;
+          order: 0;
+        }
+
+        .form-card { order: 1; }
+
+        .return-preview {
+          position: fixed;
+          z-index: 5;
+          inset: 0 0 auto;
+          display: flex;
+          justify-content: center;
+          padding: 0.75rem 1rem 2rem;
+          background: linear-gradient(to bottom, rgba(13, 13, 26, 0.96), rgba(13, 13, 26, 0));
+          color: #fff;
+          font-size: 0.85rem;
+          font-weight: 600;
+          text-decoration: none;
+          opacity: 1;
+          transition: opacity 0.2s ease;
+        }
+
+        .return-preview::after {
+          content: "";
+          position: absolute;
+          inset: 0;
+          z-index: -1;
+          backdrop-filter: blur(8px);
+          -webkit-backdrop-filter: blur(8px);
+          mask-image: linear-gradient(to bottom, #000 0%, transparent 100%);
+        }
+
+        body.preview-visible .return-preview {
+          opacity: 0;
+          pointer-events: none;
+        }
+      }
+
       @media (max-width: 600px) {
         .form-row label { min-width: 100px; font-size: 12px; }
         .form-card { padding: 1.2rem; }
@@ -386,7 +457,7 @@
       <div class="main-layout">
 
         <!-- Sprite Preview -->
-        <div class="glass-card sprite-preview-card">
+        <div class="glass-card sprite-preview-card" id="sprite-preview">
           <h2>Preview</h2>
           <img draggable="true" class="cat-sprite-img" style="image-rendering: pixelated" />
         </div>
@@ -792,6 +863,20 @@
       </footer>
 
     </div>
+
+    <a class="return-preview" href="#sprite-preview" aria-label="Return to preview">Return to preview</a>
+
+    <script>
+      const preview = document.querySelector("#sprite-preview");
+
+      if (preview && "IntersectionObserver" in window) {
+        const previewObserver = new IntersectionObserver(([entry]) => {
+          document.body.classList.toggle("preview-visible", entry.isIntersecting);
+        }, { threshold: 0.15 });
+
+        previewObserver.observe(preview);
+      }
+    </script>
 
     <script type="module" src="/src/main.ts"></script>
   </body>
