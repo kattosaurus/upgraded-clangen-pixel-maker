@@ -19,7 +19,7 @@ const SPRITE_URLS: string[] = [leaf1, leaf2, leaf3, leaf4, leaf5];
 
 const CONFIG = {
   /** CSS pixels used for each pixel of the texture (4 = every texture pixel is 4x4 px). */
-  pixelScale: 8,
+  pixelScale: 6,
   /** Max leaves alive at once. */
   maxLeaves: 360,
   /** Random delay between spawns, in ms [min, max]. */
