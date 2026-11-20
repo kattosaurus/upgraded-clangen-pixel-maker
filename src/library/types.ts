@@ -15,7 +15,7 @@ type Pelt = {
   scars?: Array<string> | undefined;
   tint: string;
   whitePatchesTint: string;
-  accessory?: string | undefined;
+  accessory?: Array<string> | undefined;
   reverse: boolean;
 };
 
@@ -28,15 +28,15 @@ type JSONData = {
   white_patches: string | null;
   vitiligo: string | null;
   points: string | null;
-  white_patches_tint: string;
-  pattern: string | null;
+  white_patches_tint: string | null;
+  tortie_marking: string | null;
   tortie_base: string | null;
   tortie_pattern: string | null;
   tortie_color: string | null;
   skin: string;
-  tint: string;
-  scars: string | null;
-  accessory: string | string[] | null;
+  tint: string | null;
+  scars: string[];
+  accessory: string[];
 };
 
 export type { Pelt, JSONData };

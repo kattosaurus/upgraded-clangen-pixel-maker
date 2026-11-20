@@ -10,6 +10,14 @@ import tints from "../assets/tints/tint.json";
 import whitePatchesTints from "../assets/tints/white_patches_tint.json";
 import peltInfo from "../assets/peltInfo.json";
 
+import whitePatchesLittleData from "../assets/data/white_patches_little_sprite_data.json";
+import whitePatchesMidData from "../assets/data/white_patches_mid_sprite_data.json";
+import whitePatchesMostlyData from "../assets/data/white_patches_mostly_sprite_data.json";
+import whitePatchesHighData from "../assets/data/white_patches_high_sprite_data.json";
+import collarPaletteOrder from "../assets/data/collar_palette_order.json";
+
+type Collar = keyof typeof collarPaletteOrder
+
 function getSpritePosition(spriteName: string, spriteNumber: number) {
   return {
     url: `sprites/split/${spriteName}_${spriteNumber}.png`,
@@ -18,7 +26,7 @@ function getSpritePosition(spriteName: string, spriteNumber: number) {
   };
 }
 
-async function loadImage(url: string) {
+async function loadImage(url: string): Promise<HTMLImageElement> {
   return new Promise((resolve, reject) => {
     const img = new Image();
     img.src = url;
@@ -74,6 +82,43 @@ async function drawTint(
   ctx.globalCompositeOperation = compositeOperation;
 }
 
+/**
+ * Recolours image.
+ * 
+ * Has some extra tolerance, because some browsers slightly wiggle canvas values
+ * in order to fight browser fingerprinting.
+ * 
+ * @param paletteMap - Map from original colours to new ones, formatted as "R G B".
+ * @param ctx - The canvas context you are recolouring.
+ * @param tolerance - Delta for checking colour equalities.
+ */
+async function recolourImage(paletteMap: Record<string, string>, ctx: any, tolerance: number) {
+  const imageData = ctx.getImageData(0, 0, 50, 50);
+
+  for (let i = 0; i < imageData.data.length; i+=4) {
+    const r = imageData.data[i];
+    const g = imageData.data[i + 1];
+    const b = imageData.data[i + 2];
+
+    for (const [spriteColour, newColourStr] of Object.entries(paletteMap)) {
+      // read colours
+      const oldColours = spriteColour.split(" ");
+      const [mR, mG, mB] = [Number(oldColours[0]), Number(oldColours[1]), Number(oldColours[2])];
+      const newColours = newColourStr.split(" "); 
+
+      // if they're "close enough" to the correct mapping colour, set the new one
+      if ((Math.abs(r - mR) <= tolerance) &&
+          (Math.abs(g - mG) <= tolerance) && 
+          (Math.abs(b - mB) <= tolerance)) {
+        imageData.data[i] = newColours[0];
+        imageData.data[i + 1] = newColours[1];
+        imageData.data[i + 2] = newColours[2];
+      }
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+}
+
 async function drawMaskedSprite(
   spriteName: string,
   maskSpriteName: string,
@@ -102,14 +147,14 @@ async function drawShading(spriteNumber: number, ctx: any) {
 
   offscreenContext.drawImage(ctx.canvas, 0, 0);
   offscreenContext.globalCompositeOperation = "source-in";
-  await drawSprite("shaders", spriteNumber, offscreenContext);
+  await drawSprite("shader_mask", spriteNumber, offscreenContext);
 
   const oldCompositeOperation = ctx.globalCompositeOperation;
   ctx.globalCompositeOperation = "multiply";
   ctx.drawImage(offscreen, 0, 0);
   ctx.globalCompositeOperation = oldCompositeOperation;
 
-  await drawSprite("lighting", spriteNumber, ctx);
+  await drawSprite("shader_lighting", spriteNumber, ctx);
 }
 
 async function drawMissingScar(
@@ -145,7 +190,7 @@ async function drawCat(
   pelt: Pelt,
   catSprite: number,
   dead = false,
-  darkForest = false,
+  afterlife?: "starclan" | "dark forest" | "unknown residence",
   shading = false,
   aprilFools = false,
 ) {
@@ -158,9 +203,9 @@ async function drawCat(
   }
 
   if (pelt.name !== "Tortie" && pelt.name !== "Calico") {
-    await drawSprite(`${pelt.spritesName}${pelt.colour}`, catSprite, ctx);
+    await drawSprite(`colours_${pelt.spritesName}${pelt.colour}`, catSprite, ctx);
   } else {
-    await drawSprite(`${pelt.tortieBase}${pelt.colour}`, catSprite, ctx);
+    await drawSprite(`colours_${pelt.tortieBase}${pelt.colour}`, catSprite, ctx);
 
     var tortiePattern;
     if (pelt.tortiePattern == "Single") {
@@ -170,8 +215,8 @@ async function drawCat(
     }
 
     await drawMaskedSprite(
-      `${tortiePattern}${pelt.tortieColour}`,
-      `tortiemask${pelt.pattern}`,
+      `colours_${tortiePattern}${pelt.tortieColour}`,
+      `patches_tortie${pelt.pattern}`,
       catSprite,
       ctx,
     );
@@ -195,7 +240,13 @@ async function drawCat(
   if (pelt.whitePatches !== undefined) {
     const offscreen = new OffscreenCanvas(50, 50);
     const offscreenContext = offscreen.getContext("2d");
-    await drawSprite(`white${pelt.whitePatches}`, catSprite, offscreenContext);
+
+    for (const whitePatchesSpriteData of [whitePatchesLittleData, whitePatchesMidData, whitePatchesMostlyData, whitePatchesHighData]) {
+      if (whitePatchesSpriteData.sprite_list.flat().includes(pelt.whitePatches)) {
+        await drawSprite(`${whitePatchesSpriteData.spritesheet}${pelt.whitePatches}`, catSprite, offscreenContext);
+      }
+    }
+
     if (
       pelt.whitePatchesTint !== "none" &&
       Object.keys(whitePatchesTints.tint_colours).includes(
@@ -215,7 +266,7 @@ async function drawCat(
   if (pelt.points !== undefined) {
     const offscreen = new OffscreenCanvas(50, 50);
     const offscreenContext = offscreen.getContext("2d");
-    await drawSprite(`white${pelt.points}`, catSprite, offscreenContext);
+    await drawSprite(`patches_points${pelt.points}`, catSprite, offscreenContext);
     if (
       pelt.whitePatchesTint !== "none" &&
       Object.keys(whitePatchesTints.tint_colours).includes(
@@ -233,12 +284,12 @@ async function drawCat(
     ctx.drawImage(offscreen, 0, 0);
   }
   if (pelt.vitiligo !== undefined) {
-    await drawSprite(`white${pelt.vitiligo}`, catSprite, ctx);
+    await drawSprite(`patches_vitiligo${pelt.vitiligo}`, catSprite, ctx);
   }
 
   await drawSprite(`eyes${pelt.eyeColour}`, catSprite, ctx);
   if (pelt.eyeColour2 !== undefined) {
-    await drawSprite(`eyes2${pelt.eyeColour2}`, catSprite, ctx);
+    await drawMaskedSprite(`eyes${pelt.eyeColour2}`, "heterochromiamask", catSprite, ctx);
   }
 
   if (pelt.scars !== undefined) {
@@ -258,20 +309,24 @@ async function drawCat(
 
   if (!aprilFools) {
     if (dead) {
-      if (darkForest) {
-        await drawSprite("lineartdf", catSprite, ctx);
-      } else {
-        await drawSprite("lineartdead", catSprite, ctx);
+      if (afterlife == "dark forest") {
+        await drawSprite("lineart_df", catSprite, ctx);
+      } else if (afterlife == "starclan") {
+        await drawSprite("lineart_sc", catSprite, ctx);
+      } else if (afterlife == "unknown residence") {
+        await drawSprite("lineart_ur", catSprite, ctx);
       }
     } else {
-      await drawSprite("lines", catSprite, ctx);
+      await drawSprite("lineart", catSprite, ctx);
     }
   } else {
     if (dead) {
-      if (darkForest) {
+      if (afterlife == "dark forest") {
         await drawSprite("aprilfoolslineartdf", catSprite, ctx);
-      } else {
+      } else if (afterlife === "starclan") {
         await drawSprite("aprilfoolslineartdead", catSprite, ctx);
+      } else if (afterlife === "unknown residence") {
+        await drawSprite("aprilfoolslineartur", catSprite, ctx);
       }
     } else {
       await drawSprite("aprilfoolslineart", catSprite, ctx);
@@ -283,22 +338,87 @@ async function drawCat(
   if (pelt.scars !== undefined) {
     for (const scar of pelt.scars) {
       if (peltInfo.scars2.includes(scar)) {
-        await drawMissingScar(`scars${scar}`, catSprite, ctx);
+        await drawMissingScar(`scars_missing_part${scar}`, catSprite, ctx);
       }
     }
   }
 
-  if (pelt.accessory !== undefined) {
-    if (peltInfo.plant_accessories.includes(pelt.accessory)) {
-      await drawSprite(`acc_herbs${pelt.accessory}`, catSprite, ctx);
-    } else if (peltInfo.wild_accessories.includes(pelt.accessory)) {
-      await drawSprite(`acc_wild${pelt.accessory}`, catSprite, ctx);
-    } else if (peltInfo.collars.includes(pelt.accessory)) {
-      await drawSprite(`collars${pelt.accessory}`, catSprite, ctx);
+  if (pelt.accessory) {
+    for (const accessory of pelt.accessory) {
+      if (peltInfo.plant_accessories.includes(accessory)) {
+        await drawSprite(`acc_plants${accessory}`, catSprite, ctx);
+      } else if (peltInfo.wild_accessories.includes(accessory)) {
+        await drawSprite(`acc_wilds${accessory}`, catSprite, ctx);
+      } else if (peltInfo.collars.includes(accessory)) {
+        // TODO: maybe just generate the images for this in python?? this is a nightmare.
+
+        // get collar and colour of accessory
+        const collarTypes = [
+          "BOW_GRADIENT", "BOW_FOIL", "BOW",
+          "LEATHER_GRADIENT", "LEATHER_SPIKE",
+          "LEATHER_BELL_SPIKE", "LEATHER_BELL", "LEATHER",
+          "NYLON_BELL_GRADIENT", "NYLON_BELL", "NYLON_GRADIENT",
+          "NYLON"
+        ];
+        var collar: Collar  | undefined;
+        var colour: string | undefined;
+        for (const collarType of collarTypes) {
+          if (accessory.startsWith(collarType)) {
+            collar = collarType as Collar;
+            colour = accessory.substring(collar.length + 1);
+            break;
+          }
+        }
+        if (collar === undefined || colour === undefined) {
+          throw Error(`Can't read collar ${accessory}!`);
+        }
+
+        // load collar's palette image and read its data
+        const paletteImage = await loadImage(`sprites/palettes/acc_collars${collar}_palette.png`);
+        const paletteCanvas = new OffscreenCanvas(paletteImage.width, paletteImage.height);
+        const paletteContext = paletteCanvas.getContext("2d")!
+        paletteContext.drawImage(paletteImage, 0, 0);
+        const imageData = paletteContext.getImageData(0, 0, paletteImage.width, paletteImage.height);
+
+        // build palette map
+        const palette: Record<string, string> = {}
+        for (let i = 0; i < paletteImage.width * 4; i+=4) { // for every pixel in the first row
+          // get colour that will be recoloured
+          const spriteColour = `${imageData.data[i]} ${imageData.data[i + 1]} ${imageData.data[i + 2]}`;
+
+          // "offset" for the map colour is palette-order rows down
+          const offset = i + paletteImage.width * 4 * (collarPaletteOrder[collar].indexOf(colour) + 1);
+          const recolourColours = `${imageData.data[offset]} ${imageData.data[offset + 1]} ${imageData.data[offset + 2]}`;
+
+          // assign new colour to map
+          palette[spriteColour] = recolourColours;
+        }
+        // recolour sprite
+        const offscreen = new OffscreenCanvas(50, 50);
+        const offscreenContext = offscreen.getContext("2d")!;
+        await drawSprite(`acc_collars${collar}`, catSprite, offscreenContext);
+        await recolourImage(palette, offscreenContext, 5);
+
+        // add to sprite
+        ctx.drawImage(offscreen, 0, 0);
+      }
+    }
+  }
+
+  if (dead) {
+    if (afterlife == "starclan") {
+      await drawSprite("line_sc_overlay", catSprite, ctx);
+    } else if (afterlife == "unknown residence") {
+      await drawSprite("line_ur_overlay", catSprite, ctx);
     }
   }
 
   outCtx.clearRect(0, 0, outCanvas.width, outCanvas.height);
+  if (dead) {
+    if (afterlife == "unknown residence") {
+      await drawSprite("line_ur_underlay", catSprite, ctx);
+    }
+  }
   if (pelt.reverse) {
     outCtx.scale(-1, 1);
     outCtx.drawImage(canvas, -outCanvas.width, 0);

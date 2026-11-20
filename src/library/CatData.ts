@@ -37,6 +37,69 @@ const spritesnameToName = {
   masked: "Masked",
 };
 
+const conversion = {
+  "CRIMSON": "LEATHER_crimson",
+  "BLUE": "LEATHER_blue",
+  "YELLOW": "LEATHER_yellow",
+  "CYAN": "LEATHER_cyan",
+  "RED": "LEATHER_orange",
+  "LIME": "LEATHER_lime",
+  "GREEN": "LEATHER_green",
+  "WHITE": "LEATHER_white",
+  "BLACK": "LEATHER_black",
+  "SPIKES": "LEATHER_SPIKE_black_gold",
+  "PINK": "LEATHER_pink",
+  "PURPLE": "LEATHER_purple",
+  "MULTI": "LEATHER_rose",
+  "INDIGO": "LEATHER_indigo",
+  "RAINBOW": "LEATHER_GRADIENT_rainbow",
+  "CRIMSONBELL": "LEATHER_BELL_crimson",
+  "BLUEBELL": "LEATHER_BELL_blue",
+  "YELLOWBELL": "LEATHER_BELL_yellow",
+  "CYANBELL": "LEATHER_BELL_cyan",
+  "REDBELL": "LEATHER_BELL_orange",
+  "LIMEBELL": "LEATHER_BELL_lime",
+  "GREENBELL": "LEATHER_BELL_green",
+  "WHITEBELL": "LEATHER_BELL_white",
+  "BLACKBELL": "LEATHER_BELL_black",
+  "SPIKESBELL": "LEATHER_BELL_SPIKE_black_gold",
+  "PINKBELL": "LEATHER_BELL_pink",
+  "PURPLEBELL": "LEATHER_BELL_purple",
+  "MULTIBELL": "LEATHER_BELL_rose",
+  "INDIGOBELL": "LEATHER_BELL_indigo",
+  "RAINBOWBELL": "LEATHER_BELL_GRADIENT_rainbow",
+  "CRIMSONBOW": "BOW_crimson",
+  "BLUEBOW": "BOW_blue",
+  "YELLOWBOW": "BOW_yellow",
+  "CYANBOW": "BOW_cyan",
+  "REDBOW": "BOW_orange",
+  "LIMEBOW": "BOW_lime",
+  "GREENBOW": "BOW_green",
+  "WHITEBOW": "BOW_white",
+  "BLACKBOW": "BOW_black",
+  "SPIKESBOW": "BOW_FOIL_black_gold",
+  "PINKBOW": "BOW_pink",
+  "PURPLEBOW": "BOW_purple",
+  "MULTIBOW": "BOW_rose",
+  "INDIGOBOW": "BOW_indigo",
+  "RAINBOWBOW": "BOW_GRADIENT_rainbow",
+  "CRIMSONNYLON": "NYLON_BELL_crimson",
+  "BLUENYLON": "NYLON_BELL_blue",
+  "YELLOWNYLON": "NYLON_BELL_yellow",
+  "CYANNYLON": "NYLON_BELL_cyan",
+  "REDNYLON": "NYLON_BELL_orange",
+  "LIMENYLON": "NYLON_BELL_lime",
+  "GREENNYLON": "NYLON_BELL_green",
+  "WHITENYLON": "NYLON_BELL_white",
+  "BLACKNYLON": "NYLON_BELL_black",
+  "SPIKESNYLON": "NYLON_BELL_black_gold",
+  "PINKNYLON": "NYLON_BELL_pink",
+  "PURPLENYLON": "NYLON_BELL_purple",
+  "MULTINYLON": "NYLON_BELL_rose",
+  "INDIGONYLON": "NYLON_BELL_indigo",
+  "RAINBOWNYLON": "NYLON_BELL_GRADIENT_rainbow"
+}
+
 class CatData {
   shading: boolean;
   reverse: boolean;
@@ -73,7 +136,7 @@ class CatData {
     this.tortiePattern = null;
 
     this.peltName = "SingleColour";
-    this.spriteNumber = 0;
+    this.spriteNumber = 3;
     this.colour = "CREAM";
     this.tint = "none";
     this.skinColour = "BLACK";
@@ -113,7 +176,7 @@ class CatData {
       points: this.points === null ? undefined : this.points,
       vitiligo: this.vitiligo === null ? undefined : this.vitiligo,
       spritesName: nameToSpritesname[peltName],
-      accessory: this.accessory === null ? undefined : this.accessory,
+      accessory: this.accessory === null ? [] : [this.accessory],
       reverse: this.reverse,
 
       tortieBase: nameToSpritesname[peltName],
@@ -121,11 +184,8 @@ class CatData {
       tortiePattern: nameToSpritesname[tortiePattern],
       tortieColour: this.tortieColour === null ? undefined : this.tortieColour,
 
-      scars: [],
+      scars: this.scar ? [this.scar] : [],
     };
-    if (this.scar) {
-      pelt["scars"] = [this.scar];
-    }
 
     return pelt;
   }
@@ -144,17 +204,17 @@ class CatData {
         white_patches: this.whitePatches,
         vitiligo: this.vitiligo,
         points: this.points,
-        white_patches_tint: this.whitePatchesTint,
-        pattern: this.name === "Tortie" ? this.tortieMask : null,
+        white_patches_tint: this.whitePatchesTint === "none" ? null : this.whitePatchesTint,
+        tortie_marking: this.name === "Tortie" ? this.tortieMask : null,
         tortie_base:
           this.name === "Tortie" ? nameToSpritesname[peltName] : null,
         tortie_pattern:
           this.name === "Tortie" ? nameToSpritesname[tortiePattern] : null,
         tortie_color: this.name === "Tortie" ? this.tortieColour : null,
         skin: this.skinColour,
-        tint: this.tint,
-        scars: this.scar,
-        accessory: this.accessory === undefined ? null : this.accessory,
+        tint: this.tint === "none" ? null : this.tint,
+        scars: this.scar ? [this.scar] : [],
+        accessory: this.accessory ? [this.accessory] : []
       },
       undefined,
       4,
@@ -185,7 +245,7 @@ class CatData {
       vitiligo: this.vitiligo === null ? "" : this.vitiligo,
       accessory: this.accessory === null ? "" : this.accessory,
       scar: this.scar === null ? "" : this.scar,
-      version: "v1",
+      version: "v2",
     });
     return new URL(`${base}?${params}`);
   }
@@ -214,7 +274,7 @@ class CatData {
     catData.points = pelt.points === undefined ? null : pelt.points;
     catData.vitiligo = pelt.vitiligo === undefined ? null : pelt.vitiligo;
 
-    catData.accessory = pelt.accessory === undefined ? null : pelt.accessory;
+    catData.accessory = pelt.accessory ? pelt.accessory[0] : null;
     catData.reverse = pelt.reverse;
 
     catData.tortieMask = pelt.pattern === undefined ? null : pelt.pattern;
@@ -230,86 +290,101 @@ class CatData {
     const catData = new CatData();
     const params = new URL(url).searchParams;
 
+    const scar = params.get("scar");
+    const accessory = params.get("accessory");
+    const vitiligo = params.get("vitiligo");
+    const whitePatchesTint = params.get("whitePatchesTint");
+    const points = params.get("points");
+    const whitePatches = params.get("whitePatches");
+    const eyeColour2 = params.get("eyeColour2");
+    const eyeColour = params.get("eyeColour");
+    const skinColour = params.get("skinColour");
+    const tint = params.get("tint");
+    const colour = params.get("colour");
+    const spriteNumber = params.get("spriteNumber");
+    const peltName = params.get("peltName");
+    const tortiePattern = params.get("tortiePattern");
+    const tortieColour = params.get("tortieColour");
+    const tortieMask = params.get("tortieMask");
+    const backgroundColour = params.get("backgroundColour");
+
+    const isTortie = params.get("isTortie");
+    const shading = params.get("shading");
+    const reverse = params.get("reverse");
+
+    catData.isTortie = isTortie === "true" ? true : false;
+    catData.shading = shading === "true" ? true : false;
+    catData.reverse = reverse === "true" ? true : false;
+
+    if (scar) {
+      catData.scar = scar;
+    }
+    if (accessory) {
+      catData.accessory = accessory;
+    }
+    if (vitiligo) {
+      catData.vitiligo = vitiligo;
+    }
+    if (whitePatchesTint) {
+      catData.whitePatchesTint = whitePatchesTint;
+    }
+    if (points) {
+      catData.points = points;
+    }
+    if (whitePatches) {
+      catData.whitePatches = whitePatches;
+    }
+    if (eyeColour2) {
+      catData.eyeColour2 = eyeColour2;
+    }
+    if (eyeColour) {
+      catData.eyeColour = eyeColour;
+    }
+    if (skinColour) {
+      catData.skinColour = skinColour;
+    }
+    if (tint) {
+      catData.tint = tint;
+    }
+    if (colour) {
+      catData.colour = colour;
+    }
+    if (spriteNumber) {
+      catData.spriteNumber = Number(spriteNumber);
+    } else {
+      catData.spriteNumber = 3;
+    }
+    if (peltName) {
+      catData.peltName = peltName;
+    }
+    if (tortiePattern) {
+      catData.tortiePattern = tortiePattern;
+    }
+    if (tortieColour) {
+      catData.tortieColour = tortieColour;
+    }
+    if (tortieMask) {
+      catData.tortieMask = tortieMask;
+    }
+    if (backgroundColour) {
+      catData.backgroundColour = backgroundColour;
+    }
+
     if (params.get("version") === "v1") {
-      const scar = params.get("scar");
-      const accessory = params.get("accessory");
-      const vitiligo = params.get("vitiligo");
-      const whitePatchesTint = params.get("whitePatchesTint");
-      const points = params.get("points");
-      const whitePatches = params.get("whitePatches");
-      const eyeColour2 = params.get("eyeColour2");
-      const eyeColour = params.get("eyeColour");
-      const skinColour = params.get("skinColour");
-      const tint = params.get("tint");
-      const colour = params.get("colour");
-      const spriteNumber = params.get("spriteNumber");
-      const peltName = params.get("peltName");
-      const tortiePattern = params.get("tortiePattern");
-      const tortieColour = params.get("tortieColour");
-      const tortieMask = params.get("tortieMask");
-      const backgroundColour = params.get("backgroundColour");
-
-      const isTortie = params.get("isTortie");
-      const shading = params.get("shading");
-      const reverse = params.get("reverse");
-
-      catData.isTortie = isTortie === "true" ? true : false;
-      catData.shading = shading === "true" ? true : false;
-      catData.reverse = reverse === "true" ? true : false;
-
-      if (scar) {
-        catData.scar = scar;
-      }
-      if (accessory) {
-        catData.accessory = accessory;
-      }
-      if (vitiligo) {
-        catData.vitiligo = vitiligo;
-      }
-      if (whitePatchesTint) {
-        catData.whitePatchesTint = whitePatchesTint;
-      }
-      if (points) {
-        catData.points = points;
-      }
-      if (whitePatches) {
-        catData.whitePatches = whitePatches;
-      }
-      if (eyeColour2) {
-        catData.eyeColour2 = eyeColour2;
-      }
-      if (eyeColour) {
-        catData.eyeColour = eyeColour;
-      }
-      if (skinColour) {
-        catData.skinColour = skinColour;
-      }
-      if (tint) {
-        catData.tint = tint;
-      }
-      if (colour) {
-        catData.colour = colour;
-      }
-      if (spriteNumber) {
-        catData.spriteNumber = Number(spriteNumber);
-      }
-      if (peltName) {
-        catData.peltName = peltName;
-      }
-      if (tortiePattern) {
-        catData.tortiePattern = tortiePattern;
-      }
-      if (tortieColour) {
-        catData.tortieColour = tortieColour;
-      }
-      if (tortieMask) {
-        catData.tortieMask = tortieMask;
-      }
-      if (backgroundColour) {
-        catData.backgroundColour = backgroundColour;
+      if (catData.accessory && catData.accessory in conversion) {
+        catData.accessory = conversion[catData.accessory as keyof typeof conversion];
       }
 
-      return catData;
+      if (0 <= catData.spriteNumber && catData.spriteNumber <= 5) {
+        catData.spriteNumber += 3;
+      }
+      else if (6 <= catData.spriteNumber && catData.spriteNumber <= 19) {
+        catData.spriteNumber += 6;
+      }
+      else if (catData.spriteNumber === 20) {
+        catData.spriteNumber = 2;
+      }
+
     }
     return catData;
   }
@@ -327,22 +402,24 @@ class CatData {
     }
     catData.colour = data.pelt_color;
     catData.skinColour = data.skin;
-    catData.tint = data.tint;
+    catData.tint = data.tint === null ? "none" : data.tint;
     catData.eyeColour = data.eye_colour;
     catData.eyeColour2 = data.eye_colour2;
 
-    catData.whitePatchesTint = data.white_patches_tint;
+    catData.whitePatchesTint = data.white_patches_tint === null ? "none" : data.white_patches_tint;
     catData.whitePatches = data.white_patches;
     catData.points = data.points;
     catData.vitiligo = data.vitiligo;
+    catData.accessory = data.accessory ? data.accessory[0] : null
     if (Array.isArray(data.accessory)) {
       catData.accessory = data.accessory.length === 0 ? null : data.accessory[0];
     } else {
       catData.accessory = data.accessory;
     }
+    catData.scar = data.scars ? data.scars[0] : null;
     catData.reverse = data.reverse;
 
-    catData.tortieMask = catData.isTortie ? data.pattern : null;
+    catData.tortieMask = catData.isTortie ? data.tortie_marking : null;
     catData.tortiePattern = 
       data.tortie_pattern === null ? null : spritesnameToName[data.tortie_pattern as keyof typeof spritesnameToName];
     catData.tortieColour = data.tortie_color;
