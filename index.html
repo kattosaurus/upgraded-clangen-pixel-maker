@@ -443,6 +443,21 @@
         }
       }
 
+      @media (min-width: 1001px) and (max-width: 1200px) {
+        .form-card {
+          width: min(calc(40vw - 1.5rem), 500px);
+        }
+
+        .form-row:not(.sharecode-div) {
+          flex-wrap: wrap;
+        }
+
+        .form-row:not(.sharecode-div) label {
+          flex-basis: 100%;
+          min-width: 0;
+        }
+      }
+
       @media (max-width: 600px) {
         .form-row:not(.sharecode-div) { flex-wrap: wrap; }
         .form-row:not(.sharecode-div) label { min-width: 100%; font-size: 12px; }
