@@ -4,7 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Clangen pixel-cat maker+</title>
-    <meta name="description" content="Make a ClanGen cat sprite in your browser. No download required!" />
+    <meta name="description" content="Clangen pixel-cat maker, create your own pixel cats, no download required!\nMade with love for cat lovers and warriors fans" />
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
       * {
@@ -13,28 +13,100 @@
         padding: 0;
       }
 
+      :root {
+        --star-color: #ffffff;
+        --star-opacity-min: 0.4;
+        --star-filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.9));
+      }
+
       html, body {
         min-height: 100%;
         width: 100%;
         font-family: 'Poppins', sans-serif;
         color: #f0f0f0;
-        background: #0d0d1a;
         scrollbar-width: thin;
         scrollbar-color: #ffffff40 rgba(0,0,0,0.2);
       }
 
-      /* Video background */
-      #bgVideo {
+      /* The colour lives on html only, so the fixed sky layer (z-index: -1)
+         is not painted over by the body background. */
+      html {
+        background: #0d0d1a;
+      }
+
+      body {
+        background: transparent;
+      }
+
+      /* ── Night sky background ── */
+      .bg-sky {
         position: fixed;
-        right: 0;
-        bottom: 0;
-        min-width: 100%;
-        min-height: 100%;
-        width: auto;
-        height: auto;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
         z-index: -1;
-        object-fit: cover;
-        filter: brightness(0.6);
+        overflow: hidden;
+        pointer-events: none;
+        background: linear-gradient(to bottom, #05050d 0%, #0d0d1a 55%, #151530 100%);
+      }
+
+      /* Soft purple nebula patches. This is the first child of .bg-sky,
+         so the stars (appended later) are painted on top of it. */
+      .bg-sky::before {
+        content: "";
+        position: absolute;
+        inset: -10%;
+        pointer-events: none;
+        background:
+          radial-gradient(ellipse 22% 16% at 18% 22%, rgba(139, 92, 246, 0.28) 0%, rgba(139, 92, 246, 0) 100%),
+          radial-gradient(ellipse 16% 12% at 30% 30%, rgba(192, 132, 252, 0.14) 0%, rgba(192, 132, 252, 0) 100%),
+          radial-gradient(ellipse 26% 18% at 82% 16%, rgba(99, 102, 241, 0.24) 0%, rgba(99, 102, 241, 0) 100%),
+          radial-gradient(ellipse 18% 14% at 70% 48%, rgba(168, 85, 247, 0.20) 0%, rgba(168, 85, 247, 0) 100%),
+          radial-gradient(ellipse 24% 16% at 12% 70%, rgba(124, 58, 237, 0.22) 0%, rgba(124, 58, 237, 0) 100%),
+          radial-gradient(ellipse 20% 14% at 55% 82%, rgba(217, 70, 239, 0.14) 0%, rgba(217, 70, 239, 0) 100%),
+          radial-gradient(ellipse 14% 10% at 90% 78%, rgba(129, 140, 248, 0.18) 0%, rgba(129, 140, 248, 0) 100%);
+        filter: blur(28px);
+        animation: nebulaDrift 70s ease-in-out infinite alternate;
+        will-change: transform;
+      }
+
+      @keyframes nebulaDrift {
+        0% {
+          transform: translate3d(-1.5%, -1%, 0) scale(1);
+          opacity: 0.85;
+        }
+        100% {
+          transform: translate3d(1.5%, 1%, 0) scale(1.06);
+          opacity: 1;
+        }
+      }
+
+      .star {
+        position: absolute;
+        background-color: var(--star-color);
+        border-radius: 50%;
+        pointer-events: none;
+        will-change: transform, opacity;
+        transform: translate3d(0, 0, 0);
+        filter: var(--star-filter);
+        animation: brightTwinkleMove var(--duration) infinite ease-in-out;
+      }
+
+      @keyframes brightTwinkleMove {
+        0%, 100% {
+          opacity: var(--star-opacity-min);
+          transform: translate3d(0, 0, 0) scale(0.8);
+        }
+        50% {
+          opacity: 1;
+          transform: translate3d(var(--move-x), var(--move-y), 0) scale(1.2);
+        }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .star { animation: none; opacity: 0.7; }
+        .bg-sky::before { animation: none; }
       }
 
       /* ── Page layout ── */
@@ -467,9 +539,7 @@
     </style>
   </head>
   <body>
-    <video id="bgVideo" autoplay muted loop playsinline>
-      <source src="./bg.mp4" type="video/mp4">
-    </video>
+    <div class="bg-sky"></div>
 
     <div class="page-wrapper">
       
@@ -897,6 +967,40 @@
 
         previewObserver.observe(preview);
       }
+
+      // ── Night sky stars (same effect as the katt page) ──
+      function generateStars(starCount) {
+        const sky = document.querySelector('.bg-sky');
+        if (!sky) return;
+        const fragment = document.createDocumentFragment();
+
+        for (let i = 0; i < starCount; i++) {
+          const star = document.createElement('div');
+          star.classList.add('star');
+
+          const size = Math.random() * 1.5 + 1;
+          star.style.width = `${size}px`;
+          star.style.height = `${size}px`;
+
+          star.style.left = `${Math.random() * 100}%`;
+          star.style.top = `${Math.random() * 100}%`;
+
+          const moveX = (Math.random() * 16 - 8) + 'px';
+          const moveY = (Math.random() * 16 - 8) + 'px';
+          star.style.setProperty('--move-x', moveX);
+          star.style.setProperty('--move-y', moveY);
+
+          const duration = (Math.random() * 3 + 4) + 's';
+          star.style.setProperty('--duration', duration);
+          star.style.animationDelay = `${Math.random() * -4}s`;
+
+          fragment.appendChild(star);
+        }
+
+        sky.appendChild(fragment);
+      }
+
+      generateStars(140);
     </script>
 
     <script type="module" src="/src/main.ts"></script>
