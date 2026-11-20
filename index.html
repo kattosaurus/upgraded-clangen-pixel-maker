@@ -42,6 +42,7 @@
         display: flex;
         flex-direction: column;
         align-items: center;
+        width: 100%;
         padding: 2rem 1rem 4rem;
         gap: 2rem;
       }
@@ -112,18 +113,20 @@
       .main-layout {
         display: block;
         gap: 1.5rem;
-        width: min(96%, 1440px);
+        width: min(96vw, 1440px);
         align-items: flex-start;
       }
 
       .form-card {
-        width: min(65%, 900px);
+        width: min(40vw, 620px);
       }
 
       .sprite-preview-card {
         position: fixed;
-        top: 1rem;
-        right: clamp(1rem, 3vw, 3rem);
+        top: 50%;
+        left: 66.6667%;
+        right: auto;
+        transform: translate(-50%, -50%);
         width: min(28vw, 360px);
         max-width: none;
         max-height: calc(100vh - 2rem);
@@ -135,7 +138,7 @@
       .form-card {
         flex: 1;
         min-width: 300px;
-        max-width: 860px;
+        max-width: 620px;
         padding: 2rem;
       }
 
@@ -180,6 +183,8 @@
       /* ── Selects ── */
       select {
         flex: 1;
+        min-width: 0;
+        width: 100%;
         padding: 8px 12px;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
@@ -381,7 +386,7 @@
       }
 
       /* ── Responsive ── */
-      @media (max-width: 900px) {
+      @media (max-width: 1000px) {
         .main-layout {
           display: flex;
           flex-direction: column;
@@ -398,6 +403,7 @@
 
         .sprite-preview-card {
           position: static;
+          transform: none;
           max-height: none;
           overflow: visible;
           order: 0;
@@ -438,7 +444,8 @@
       }
 
       @media (max-width: 600px) {
-        .form-row label { min-width: 100px; font-size: 12px; }
+        .form-row:not(.sharecode-div) { flex-wrap: wrap; }
+        .form-row:not(.sharecode-div) label { min-width: 100%; font-size: 12px; }
         .form-card { padding: 1.2rem; }
         .main-layout { width: 95%; }
       }
